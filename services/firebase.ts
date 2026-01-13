@@ -21,37 +21,38 @@ import {
 } from "firebase/firestore";
 import { ProductCode, Article, UserProfile, UserRole, Question, SpinPrize, ChatMessage } from '../types';
 
-// Helper để lấy biến môi trường an toàn, tránh lỗi crash nếu import.meta.env undefined
-const getEnv = (key: string, fallback: string): string => {
+// Helper để lấy biến môi trường an toàn
+const getEnv = (key: string): string => {
   try {
     const meta = import.meta as any;
     // Kiểm tra Vite env
     if (meta.env && meta.env[key]) {
       return meta.env[key];
     }
-    // Kiểm tra Process env (nếu có)
+    // Kiểm tra Process env
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
       return process.env[key];
     }
   } catch (e) {
     console.warn(`Error reading env var ${key}`, e);
   }
-  return fallback;
+  return "";
 };
 
-// Cấu hình Firebase với Fallback values để đảm bảo app luôn chạy được
+// Cấu hình Firebase
 const firebaseConfig = {
-  apiKey: getEnv('VITE_FIREBASE_API_KEY', "AIzaSyARCrPs1hBDx_NFv9h9NM3hke1vi1FFrTo"),
-  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN', "livestock-web-4478c.firebaseapp.com"),
-  projectId: getEnv('VITE_FIREBASE_PROJECT_ID', "livestock-web-4478c"),
-  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET', "livestock-web-4478c.firebasestorage.app"),
-  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', "648177635180"),
-  appId: getEnv('VITE_FIREBASE_APP_ID', "1:648177635180:web:1aa7d46d29f701927fad49"),
-  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID', "G-60B62GPVK6")
+  apiKey: getEnv('VITE_FIREBASE_API_KEY') || "AIzaSyARCrPs1hBDx_NFv9h9NM3hke1vi1FFrTo",
+  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN') || "livestock-web-4478c.firebaseapp.com",
+  projectId: getEnv('VITE_FIREBASE_PROJECT_ID') || "livestock-web-4478c",
+  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET') || "livestock-web-4478c.firebasestorage.app",
+  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || "648177635180",
+  appId: getEnv('VITE_FIREBASE_APP_ID') || "1:648177635180:web:1aa7d46d29f701927fad49",
+  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID') || "G-60B62GPVK6"
 };
 
-// Admin Key (Fallback để tránh lockout nếu chưa setup env)
-const MASTER_KEY = getEnv('VITE_ADMIN_SECRET_CODE', 'BTE04-MASTER');
+// SECURITY FIX: Không bao giờ để giá trị mặc định cho Master Key trong code.
+// Nếu không có biến môi trường, Master Key sẽ là chuỗi rỗng => Không ai đăng nhập được Admin.
+const MASTER_KEY = getEnv('VITE_ADMIN_SECRET_CODE');
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -295,8 +296,8 @@ export const recordSpin = async (uid: string, prizeId: string): Promise<void> =>
 
 // USERS & CODES
 export const verifyProductCode = async (code: string): Promise<boolean> => {
-  // Use env variable instead of hardcoded string
-  if (code === MASTER_KEY) return true;
+  // BẢO MẬT: Kiểm tra key từ biến môi trường, nếu chưa set env thì mặc định fail
+  if (MASTER_KEY && code === MASTER_KEY) return true;
 
   try {
     const codeRef = doc(db, 'product_codes', code);
@@ -314,7 +315,7 @@ export const verifyProductCode = async (code: string): Promise<boolean> => {
 };
 
 export const markCodeAsUsed = async (code: string, uid: string) => {
-  if (code === MASTER_KEY) return;
+  if (MASTER_KEY && code === MASTER_KEY) return;
 
   try {
     const codeRef = doc(db, 'product_codes', code);
@@ -333,7 +334,7 @@ export const createUserProfile = async (uid: string, phoneNumber: string, code: 
     let role = UserRole.USER;
     let allowedChannels = ['general']; 
     
-    if (code === MASTER_KEY) {
+    if (MASTER_KEY && code === MASTER_KEY) {
       role = UserRole.ADMIN;
       allowedChannels = ['general', 'pig', 'chicken', 'technical', 'market'];
     }
