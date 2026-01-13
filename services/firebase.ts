@@ -125,6 +125,16 @@ export const createArticle = async (article: Partial<Article>): Promise<void> =>
   }
 };
 
+export const updateArticle = async (id: string, data: Partial<Article>): Promise<void> => {
+    try {
+        const docRef = doc(db, 'articles', id);
+        await updateDoc(docRef, data);
+    } catch (error) {
+        console.error("Error updating article:", error);
+        throw error;
+    }
+};
+
 export const deleteArticle = async (id: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, 'articles', id));
@@ -178,6 +188,20 @@ export const addComment = async (articleId: string, comment: { userId: string, u
   }
 };
 
+export const deleteComment = async (articleId: string, commentId: string): Promise<void> => {
+    try {
+        const docRef = doc(db, 'articles', articleId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const article = docSnap.data() as Article;
+            const newComments = (article.comments || []).filter(c => c.id !== commentId);
+            await updateDoc(docRef, { comments: newComments });
+        }
+    } catch (error) {
+        console.error("Error deleting comment:", error);
+    }
+};
+
 // QUESTIONS (QA)
 export const getQuestions = async (): Promise<Question[]> => {
   try {
@@ -206,6 +230,25 @@ export const createQuestion = async (question: { userId: string, userName: strin
   }
 };
 
+export const updateQuestion = async (id: string, data: Partial<Question>): Promise<void> => {
+    try {
+        const docRef = doc(db, 'questions', id);
+        await updateDoc(docRef, data);
+    } catch (error) {
+        console.error("Error updating question:", error);
+        throw error;
+    }
+};
+
+export const deleteQuestion = async (id: string): Promise<void> => {
+    try {
+        await deleteDoc(doc(db, 'questions', id));
+    } catch (error) {
+        console.error("Error deleting question:", error);
+        throw error;
+    }
+};
+
 export const addAnswer = async (questionId: string, answer: { userId: string, userName: string, userRole: UserRole, content: string }): Promise<void> => {
   try {
     const docRef = doc(db, 'questions', questionId);
@@ -224,6 +267,20 @@ export const addAnswer = async (questionId: string, answer: { userId: string, us
   } catch (error) {
     console.error("Error adding answer:", error);
   }
+};
+
+export const deleteAnswer = async (questionId: string, answerId: string): Promise<void> => {
+    try {
+        const docRef = doc(db, 'questions', questionId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const q = docSnap.data() as Question;
+            const newAnswers = (q.answers || []).filter(a => a.id !== answerId);
+            await updateDoc(docRef, { answers: newAnswers });
+        }
+    } catch (error) {
+        console.error("Error deleting answer:", error);
+    }
 };
 
 // CHAT REALTIME

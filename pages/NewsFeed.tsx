@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getArticles, auth, getUserRole, createArticle } from '../services/firebase';
+import { getArticles, auth, getUserRole, createArticle, updateArticle, deleteArticle } from '../services/firebase';
 import { Article, UserRole, ArticleType } from '../types';
-import { Search, Calendar, PenTool, ShoppingBag, MapPin, Phone, X, Image as ImageIcon, Info, ArrowRight, ShieldCheck, Users } from 'lucide-react';
+import { Search, Calendar, PenTool, ShoppingBag, MapPin, Phone, X, Image as ImageIcon, Info, ArrowRight, ShieldCheck, Users, Edit2, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
 
 const NewsFeed: React.FC = () => {
@@ -14,7 +14,8 @@ const NewsFeed: React.FC = () => {
   const [showPostModal, setShowPostModal] = useState(false);
   const navigate = useNavigate();
 
-  // New Post Form State
+  // New Post / Edit Form State
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
   const [postContent, setPostContent] = useState('');
   const [postTitle, setPostTitle] = useState('');
   const [postImage, setPostImage] = useState('');
@@ -24,6 +25,7 @@ const NewsFeed: React.FC = () => {
   const [postPhone, setPostPhone] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState('');
 
   useEffect(() => {
     const init = async () => {
@@ -32,6 +34,7 @@ const NewsFeed: React.FC = () => {
       
       const user = auth.currentUser || JSON.parse(localStorage.getItem('bte04_demo_user') || 'null');
       if (user) {
+         setCurrentUserId(user.uid);
          if (user.role) setCurrentUserRole(user.role);
          else {
              const role = await getUserRole(user.uid);
@@ -83,7 +86,47 @@ const NewsFeed: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleCreatePost = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+      setEditingArticleId(null);
+      setPostTitle('');
+      setPostContent('');
+      setPostImage('');
+      setPostPrice('');
+      setPostLocation('');
+      // Keep phone if pre-filled
+      if (activeTab === 'market') setPostType('market_sell');
+      else setPostType('experience');
+      setShowPostModal(true);
+  };
+
+  const openEditModal = (e: React.MouseEvent, article: Article) => {
+      e.stopPropagation(); // Prevent navigating to detail
+      setEditingArticleId(article.id);
+      setPostTitle(article.title);
+      // Remove simple HTML tags for textarea editing (crude method)
+      const contentText = article.content.replace(/<br\s*\/?>/gi, '\n').replace(/<p>/g, '').replace(/<\/p>/g, '');
+      setPostContent(contentText);
+      setPostImage(article.imageUrl);
+      setPostType(article.type || 'experience');
+      setPostPrice(article.price ? article.price.toString() : '');
+      setPostLocation(article.location || '');
+      setPostPhone(article.contactPhone || '');
+      setShowPostModal(true);
+  };
+
+  const handleDelete = async (e: React.MouseEvent, articleId: string) => {
+      e.stopPropagation();
+      if (confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
+          try {
+              await deleteArticle(articleId);
+              setArticles(prev => prev.filter(a => a.id !== articleId));
+          } catch (error) {
+              alert('Lỗi xóa bài viết');
+          }
+      }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setSubmitting(true);
       const user = auth.currentUser || JSON.parse(localStorage.getItem('bte04_demo_user') || 'null');
@@ -99,41 +142,51 @@ const NewsFeed: React.FC = () => {
       const initialStatus = isManagement ? 'approved' : 'pending';
 
       try {
-        await createArticle({
+        const articleData: Partial<Article> = {
             title: postTitle || (postType === 'experience' ? 'Chia sẻ từ thành viên' : 'Tin rao vặt'),
             category: postType === 'experience' ? 'experience' : 'market',
             type: postType,
             summary: postContent.substring(0, 100) + '...',
             content: `<p>${postContent.replace(/\n/g, '<br/>')}</p>`,
             imageUrl: postImage || 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&q=80',
-            author: user.displayName || 'Thành viên BTE04',
-            authorId: user.uid,
-            authorRole: currentUserRole,
-            price: postPrice ? parseFloat(postPrice.replace(/\D/g,'')) : undefined,
             location: postLocation,
             contactPhone: postPhone,
             tags: [],
-            status: initialStatus
-        });
-        
-        // Reset form
-        setPostTitle('');
-        setPostContent('');
-        setPostImage('');
-        setPostPrice('');
-        setPostLocation('');
-        setShowPostModal(false);
-        setActiveTab(postType === 'experience' ? 'experience' : 'market');
-        
-        if (!isManagement) {
-            alert('Bài viết của bạn đã được gửi và đang chờ duyệt.');
-        } else {
-            alert('Đăng bài thành công!');
+            // Don't override status if editing
+            ...(editingArticleId ? {} : { 
+                status: initialStatus,
+                author: user.displayName || 'Thành viên BTE04',
+                authorId: user.uid,
+                authorRole: currentUserRole,
+            })
+        };
+
+        // Conditionally add price
+        if (postPrice) {
+            const numericPrice = parseFloat(postPrice.replace(/\D/g,''));
+            if (!isNaN(numericPrice)) {
+                articleData.price = numericPrice;
+            }
         }
+
+        if (editingArticleId) {
+            await updateArticle(editingArticleId, articleData);
+            alert('Cập nhật bài viết thành công!');
+        } else {
+            await createArticle(articleData);
+            if (!isManagement) {
+                alert('Bài viết của bạn đã được gửi và đang chờ duyệt.');
+            } else {
+                alert('Đăng bài thành công!');
+            }
+        }
+        
+        setShowPostModal(false);
+        if (!editingArticleId) setActiveTab(postType === 'experience' ? 'experience' : 'market');
 
       } catch (error) {
           console.error(error);
-          alert('Lỗi đăng bài: ' + (error as any).message);
+          alert('Lỗi: ' + (error as any).message);
       } finally {
           setSubmitting(false);
       }
@@ -226,10 +279,7 @@ const NewsFeed: React.FC = () => {
                     if (canCreateOfficial && activeTab === 'official') {
                         navigate('/create-article');
                     } else {
-                        setShowPostModal(true);
-                        // Default post type based on tab
-                        if (activeTab === 'market') setPostType('market_sell');
-                        else setPostType('experience');
+                        openCreateModal();
                     }
                 }}
                 className="w-full md:w-auto bg-earth-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-earth-700 transition shadow-md flex items-center justify-center gap-2"
@@ -245,70 +295,96 @@ const NewsFeed: React.FC = () => {
         <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredArticles.map((article) => (
-            <div 
-              key={article.id}
-              onClick={() => navigate(`/article/${article.id}`)}
-              className={`
-                bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border flex flex-col group
-                ${article.type?.includes('market') ? 'border-yellow-200' : 'border-gray-200'}
-              `}
-            >
-              <div className="h-52 overflow-hidden relative bg-gray-100">
-                 <img 
-                   src={article.imageUrl} 
-                   alt={article.title} 
-                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                 />
-                 {/* Badges */}
-                 <div className="absolute top-3 left-3 flex gap-2">
-                    {article.type === 'market_sell' && <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">CẦN BÁN</span>}
-                    {article.type === 'market_buy' && <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">CẦN MUA</span>}
-                    {(!article.type || article.type === 'official') && <span className="bg-primary-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">OFFICIAL</span>}
-                    {article.type === 'experience' && <span className="bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">THÀNH VIÊN</span>}
-                 </div>
-                 
-                 {/* Price Overlay for Market */}
-                 {article.price && (
-                     <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur text-red-600 font-extrabold px-3 py-1 rounded-lg shadow-sm border border-red-100">
-                         {article.price.toLocaleString('vi-VN')} đ
-                     </div>
-                 )}
-              </div>
+          {filteredArticles.map((article) => {
+              // Check owner
+              const isOwner = currentUserId === article.authorId;
+              const canEdit = isOwner || currentUserRole === UserRole.ADMIN;
               
-              <div className="p-5 flex-1 flex flex-col">
-                <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-primary-700 transition-colors leading-snug">
-                  {article.title}
-                </h3>
-                
-                {article.type?.includes('market') && (
-                    <div className="space-y-1 mb-3 text-sm text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        {article.location && <div className="flex items-center gap-2"><MapPin size={16} className="text-slate-400"/> {article.location}</div>}
-                        {article.contactPhone && <div className="flex items-center gap-2 font-bold text-primary-700"><Phone size={16}/> {article.contactPhone}</div>}
-                    </div>
-                )}
+              return (
+                <div 
+                  key={article.id}
+                  onClick={() => navigate(`/article/${article.id}`)}
+                  className={`
+                    bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border flex flex-col group relative
+                    ${article.type?.includes('market') ? 'border-yellow-200' : 'border-gray-200'}
+                  `}
+                >
+                  <div className="h-52 overflow-hidden relative bg-gray-100">
+                     <img 
+                       src={article.imageUrl} 
+                       alt={article.title} 
+                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                     />
+                     {/* Badges */}
+                     <div className="absolute top-3 left-3 flex gap-2">
+                        {article.type === 'market_sell' && <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">CẦN BÁN</span>}
+                        {article.type === 'market_buy' && <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">CẦN MUA</span>}
+                        {(!article.type || article.type === 'official') && <span className="bg-primary-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">OFFICIAL</span>}
+                        {article.type === 'experience' && <span className="bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">THÀNH VIÊN</span>}
+                     </div>
+                     
+                     {/* Price Overlay for Market */}
+                     {article.price && (
+                         <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur text-red-600 font-extrabold px-3 py-1 rounded-lg shadow-sm border border-red-100">
+                             {article.price.toLocaleString('vi-VN')} đ
+                         </div>
+                     )}
 
-                {!article.type?.includes('market') && (
-                    <p className="text-slate-600 text-sm line-clamp-3 mb-4 flex-1 leading-relaxed">
-                        {article.summary}
-                    </p>
-                )}
-
-                <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-4 mt-auto">
-                  <div className="flex items-center space-x-1">
-                    <Calendar size={14} />
-                    <span>{article.date}</span>
+                     {/* Edit/Delete Buttons Overlay */}
+                     {canEdit && (
+                         <div className="absolute top-3 right-3 flex gap-2">
+                            <button 
+                                onClick={(e) => openEditModal(e, article)}
+                                className="bg-white/90 p-1.5 rounded-full hover:bg-blue-500 hover:text-white transition shadow text-slate-700"
+                                title="Chỉnh sửa"
+                            >
+                                <Edit2 size={16}/>
+                            </button>
+                            <button 
+                                onClick={(e) => handleDelete(e, article.id)}
+                                className="bg-white/90 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition shadow text-slate-700"
+                                title="Xóa"
+                            >
+                                <Trash2 size={16}/>
+                            </button>
+                         </div>
+                     )}
                   </div>
-                  <div className="flex items-center space-x-1 font-medium text-slate-500">
-                    {article.authorRole === UserRole.ADMIN || article.authorRole === UserRole.TECHNICAL 
-                        ? <span className="text-primary-600 flex items-center gap-1 font-bold"><PenTool size={12}/> Ban Quản Trị</span> 
-                        : article.author
-                    }
+                  
+                  <div className="p-5 flex-1 flex flex-col">
+                    <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-primary-700 transition-colors leading-snug">
+                      {article.title}
+                    </h3>
+                    
+                    {article.type?.includes('market') && (
+                        <div className="space-y-1 mb-3 text-sm text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            {article.location && <div className="flex items-center gap-2"><MapPin size={16} className="text-slate-400"/> {article.location}</div>}
+                            {article.contactPhone && <div className="flex items-center gap-2 font-bold text-primary-700"><Phone size={16}/> {article.contactPhone}</div>}
+                        </div>
+                    )}
+
+                    {!article.type?.includes('market') && (
+                        <p className="text-slate-600 text-sm line-clamp-3 mb-4 flex-1 leading-relaxed">
+                            {article.summary}
+                        </p>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-4 mt-auto">
+                      <div className="flex items-center space-x-1">
+                        <Calendar size={14} />
+                        <span>{article.date}</span>
+                      </div>
+                      <div className="flex items-center space-x-1 font-medium text-slate-500">
+                        {article.authorRole === UserRole.ADMIN || article.authorRole === UserRole.TECHNICAL 
+                            ? <span className="text-primary-600 flex items-center gap-1 font-bold"><PenTool size={12}/> Ban Quản Trị</span> 
+                            : article.author
+                        }
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+          })}
         </div>
       )}
 
@@ -327,16 +403,18 @@ const NewsFeed: React.FC = () => {
           </div>
       )}
 
-      {/* CREATE POST MODAL */}
+      {/* CREATE/EDIT POST MODAL */}
       {showPostModal && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl my-8 border border-gray-100">
                 <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-2xl">
-                    <h3 className="font-bold text-lg text-slate-800">Đăng tin mới</h3>
+                    <h3 className="font-bold text-lg text-slate-800">
+                        {editingArticleId ? 'Chỉnh sửa bài viết' : 'Đăng tin mới'}
+                    </h3>
                     <button onClick={() => setShowPostModal(false)} className="text-gray-500 hover:text-red-500"><X size={24}/></button>
                 </div>
                 
-                <form onSubmit={handleCreatePost} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     {/* Type Selector */}
                     <div className="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-lg">
                         {[
@@ -451,7 +529,7 @@ const NewsFeed: React.FC = () => {
                             disabled={submitting}
                             className="w-full bg-primary-700 hover:bg-primary-800 text-white font-bold py-3 rounded-xl shadow-lg transition-all"
                         >
-                            {submitting ? 'Đang đăng...' : 'ĐĂNG TIN NGAY'}
+                            {submitting ? 'Đang xử lý...' : (editingArticleId ? 'CẬP NHẬT' : 'ĐĂNG TIN NGAY')}
                         </button>
                     </div>
                 </form>

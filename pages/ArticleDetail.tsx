@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getArticleById, toggleLikeArticle, addComment, auth } from '../services/firebase';
+import { getArticleById, toggleLikeArticle, addComment, auth, deleteComment } from '../services/firebase';
 import { Article, Comment } from '../types';
 import Layout from '../components/Layout';
-import { ArrowLeft, Calendar, User, MessageCircle, Heart, Send } from 'lucide-react';
+import { ArrowLeft, Calendar, User, MessageCircle, Heart, Send, Trash2 } from 'lucide-react';
 
 const ArticleDetail: React.FC = () => {
   const { id } = useParams();
@@ -15,7 +15,6 @@ const ArticleDetail: React.FC = () => {
 
   useEffect(() => {
     // Get current user from auth (or local fallback in services)
-    // For now we assume auth.currentUser is populated or we rely on logic in App.tsx
     const user = auth.currentUser || JSON.parse(localStorage.getItem('bte04_demo_user') || 'null');
     setCurrentUser(user);
     
@@ -57,6 +56,12 @@ const ArticleDetail: React.FC = () => {
     await addComment(article.id, newCommentData);
     setCommentText('');
     await fetchArticle(); // Refresh to show new comment
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+      if (!article || !confirm('Xóa bình luận này?')) return;
+      await deleteComment(article.id, commentId);
+      await fetchArticle();
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
@@ -140,14 +145,21 @@ const ArticleDetail: React.FC = () => {
                   <p className="text-gray-400 italic">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
                 ) : (
                   article.comments.map((cmt) => (
-                    <div key={cmt.id} className="flex space-x-3">
+                    <div key={cmt.id} className="flex space-x-3 group">
                       <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold flex-shrink-0">
                         {cmt.userName.charAt(0).toUpperCase()}
                       </div>
-                      <div className="bg-gray-50 p-3 rounded-2xl rounded-tl-none flex-1">
+                      <div className="bg-gray-50 p-3 rounded-2xl rounded-tl-none flex-1 relative">
                         <div className="flex justify-between items-center mb-1">
                           <span className="font-bold text-gray-800 text-sm">{cmt.userName}</span>
-                          <span className="text-xs text-gray-400">{new Date(cmt.createdAt).toLocaleDateString()}</span>
+                          <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400">{new Date(cmt.createdAt).toLocaleDateString()}</span>
+                              {currentUser && cmt.userId === currentUser.uid && (
+                                  <button onClick={() => handleDeleteComment(cmt.id)} className="text-gray-400 hover:text-red-500 p-1">
+                                      <Trash2 size={14}/>
+                                  </button>
+                              )}
+                          </div>
                         </div>
                         <p className="text-gray-700 text-sm">{cmt.text}</p>
                       </div>
