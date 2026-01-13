@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BTE04 Community</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CKEditor 5 Build Classic -->
+    <script src="https://cdn.ckeditor.com/ckeditor5/41.1.0/classic/ckeditor.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#f0fdf4',
+                100: '#dcfce7',
+                500: '#22c55e', // Green
+                700: '#15803d',
+                900: '#14532d',
+              },
+              earth: {
+                50: '#fffbeb',
+                100: '#fef3c7',
+                500: '#f59e0b',
+                700: '#b45309', // Brown-ish
+                900: '#78350f',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Prevent text selection for content protection */
+      .protected-content {
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      
+      /* CKEditor Customization */
+      .ck-editor__editable_inline {
+        min-height: 350px;
+        max-height: 600px;
+      }
+      .ck-toolbar {
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+      }
+      .ck-content {
+        border-radius: 0 0 0.5rem 0.5rem !important;
+        font-family: ui-sans-serif, system-ui, sans-serif !important;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "firebase/": "https://esm.sh/firebase@^12.7.0/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-50 text-gray-800">
+    <div id="root"></div>
+  </body>
+</html>
