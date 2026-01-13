@@ -71,3 +71,20 @@ export interface SpinPrize {
   color: string;
   probability: number; // 0-100
 }
+
+export interface ChatMessage {
+  id: string;
+  text: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  channelId: string;
+  createdAt: number;
+}
+
+export type ChatChannel = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+};

@@ -12,6 +12,7 @@ import QAForum from './pages/QAForum';
 import LuckySpin from './pages/LuckySpin';
 import CreateArticle from './pages/CreateArticle';
 import Profile from './pages/Profile';
+import CommunityChat from './pages/CommunityChat';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -88,6 +89,10 @@ const App: React.FC = () => {
         <Route 
           path="/article/:id" 
           element={user ? <ArticleDetail /> : <Navigate to="/auth" />} 
+        />
+        <Route 
+          path="/chat" 
+          element={user ? <CommunityChat /> : <Navigate to="/auth" />} 
         />
         <Route 
           path="/qa" 

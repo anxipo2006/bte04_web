@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logoutUser } from '../services/firebase';
-import { Home, LogOut, Shield, Menu, X, HelpCircle, Gift, PenTool, UserCircle } from 'lucide-react';
+import { Home, LogOut, Shield, Menu, X, HelpCircle, Gift, PenTool, UserCircle, MessageCircle } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface LayoutProps {
@@ -61,6 +61,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
 
           <nav className="hidden md:flex items-center space-x-4">
              <button onClick={() => navigate('/dashboard')} className="hover:text-primary-100 font-medium flex items-center gap-1"><Home size={18}/> Trang chủ</button>
+             <button onClick={() => navigate('/chat')} className="hover:text-primary-100 font-medium flex items-center gap-1"><MessageCircle size={18}/> Phòng Họp</button>
              <button onClick={() => navigate('/qa')} className="hover:text-primary-100 font-medium flex items-center gap-1"><HelpCircle size={18}/> Hỏi đáp</button>
              <button onClick={() => navigate('/spin')} className="hover:text-primary-100 font-medium flex items-center gap-1"><Gift size={18}/> Vòng quay</button>
              
@@ -105,6 +106,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
                )}
 
                <NavItem path="/dashboard" icon={Home} label="Tin tức & Kỹ thuật" />
+               <NavItem path="/chat" icon={MessageCircle} label="Phòng Họp Cộng Đồng" />
                <NavItem path="/qa" icon={HelpCircle} label="Hỏi đáp chuyên gia" />
                <NavItem path="/spin" icon={Gift} label="Vòng quay may mắn" />
                <NavItem path="/profile" icon={UserCircle} label="Thông tin tài khoản" />

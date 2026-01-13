@@ -15,9 +15,11 @@ import {
   addDoc,
   query,
   where,
-  orderBy
+  orderBy,
+  onSnapshot,
+  limit
 } from "firebase/firestore";
-import { ProductCode, Article, UserProfile, UserRole, Question, SpinPrize } from '../types';
+import { ProductCode, Article, UserProfile, UserRole, Question, SpinPrize, ChatMessage } from '../types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyARCrPs1hBDx_NFv9h9NM3hke1vi1FFrTo",
@@ -199,6 +201,37 @@ export const addAnswer = async (questionId: string, answer: { userId: string, us
   } catch (error) {
     console.error("Error adding answer:", error);
   }
+};
+
+// CHAT REALTIME
+export const sendChatMessage = async (message: Omit<ChatMessage, 'id' | 'createdAt'>): Promise<void> => {
+    try {
+        await addDoc(collection(db, 'chat_messages'), {
+            ...message,
+            createdAt: Date.now()
+        });
+    } catch (error) {
+        console.error("Error sending chat:", error);
+    }
+};
+
+export const subscribeToChat = (channelId: string, callback: (msgs: ChatMessage[]) => void) => {
+    try {
+        const q = query(
+            collection(db, 'chat_messages'),
+            where('channelId', '==', channelId),
+            orderBy('createdAt', 'asc'),
+            limit(100) // Load last 100 messages
+        );
+        
+        return onSnapshot(q, (snapshot) => {
+            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
+            callback(msgs);
+        });
+    } catch (error) {
+        console.error("Error sub chat:", error);
+        return () => {};
+    }
 };
 
 // LUCKY SPIN
