@@ -59,10 +59,10 @@ export const logoutUser = async () => {
 
 // --- REAL FIRESTORE SERVICES ---
 
-// ARTICLES
+// ARTICLES & POSTS
 export const getArticles = async (): Promise<Article[]> => {
   try {
-    const q = query(collection(db, 'articles'), orderBy('date', 'desc'));
+    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
   } catch (error) {
@@ -85,15 +85,16 @@ export const getArticleById = async (id: string): Promise<Article | null> => {
   }
 };
 
-export const createArticle = async (article: Omit<Article, 'id' | 'views' | 'date' | 'likes' | 'comments'>): Promise<void> => {
+export const createArticle = async (article: Partial<Article>): Promise<void> => {
   try {
     const newArticleData = {
-      ...article,
-      views: 0,
-      date: new Date().toISOString().split('T')[0],
       likes: [],
       comments: [],
-      createdAt: Date.now()
+      views: 0,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: Date.now(),
+      status: 'approved', // Auto approve for now, can change to 'pending'
+      ...article,
     };
     await addDoc(collection(db, 'articles'), newArticleData);
   } catch (error) {
@@ -219,14 +220,17 @@ export const subscribeToChat = (channelId: string, callback: (msgs: ChatMessage[
     try {
         const q = query(
             collection(db, 'chat_messages'),
-            where('channelId', '==', channelId),
-            orderBy('createdAt', 'asc'),
-            limit(100) // Load last 100 messages
+            where('channelId', '==', channelId)
         );
         
         return onSnapshot(q, (snapshot) => {
-            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
+            const msgs = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage))
+                .sort((a, b) => a.createdAt - b.createdAt);
+            
             callback(msgs);
+        }, (error) => {
+            console.error("Chat Snapshot Error:", error);
         });
     } catch (error) {
         console.error("Error sub chat:", error);
@@ -269,7 +273,6 @@ export const recordSpin = async (uid: string, prizeId: string): Promise<void> =>
 
 // USERS & CODES
 export const verifyProductCode = async (code: string): Promise<boolean> => {
-  // EMERGENCY MASTER KEY for bootstrapping the first Admin account
   if (code === 'BTE04-MASTER') return true;
 
   try {
@@ -288,7 +291,7 @@ export const verifyProductCode = async (code: string): Promise<boolean> => {
 };
 
 export const markCodeAsUsed = async (code: string, uid: string) => {
-  if (code === 'BTE04-MASTER') return; // Do not mark master key as used
+  if (code === 'BTE04-MASTER') return;
 
   try {
     const codeRef = doc(db, 'product_codes', code);
@@ -304,16 +307,21 @@ export const markCodeAsUsed = async (code: string, uid: string) => {
 
 export const createUserProfile = async (uid: string, phoneNumber: string, code: string) => {
   try {
-    // Determine role based on code
     let role = UserRole.USER;
-    if (code === 'BTE04-MASTER') role = UserRole.ADMIN;
+    let allowedChannels = ['general']; // Default channel for everyone
+    
+    if (code === 'BTE04-MASTER') {
+      role = UserRole.ADMIN;
+      allowedChannels = ['general', 'pig', 'chicken', 'technical', 'market']; // Admin access all
+    }
     
     const userProfile: UserProfile = {
       uid,
       phoneNumber,
       role: role,
       activatedCode: code,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      allowedChannels: allowedChannels
     };
     await setDoc(doc(db, 'users', uid), userProfile);
   } catch (error) {
@@ -321,17 +329,48 @@ export const createUserProfile = async (uid: string, phoneNumber: string, code: 
   }
 };
 
-export const getUserRole = async (uid: string): Promise<UserRole> => {
+// GET FULL USER PROFILE
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
     const userDoc = await getDoc(doc(db, 'users', uid));
     if (userDoc.exists()) {
-      const data = userDoc.data() as UserProfile;
-      return data.role || UserRole.USER;
+      return userDoc.data() as UserProfile;
     }
+    return null;
   } catch (error) {
-    console.error("Error getting user role:", error);
+    return null;
   }
-  return UserRole.USER;
+};
+
+export const getUserRole = async (uid: string): Promise<UserRole> => {
+  try {
+    const p = await getUserProfile(uid);
+    return p?.role || UserRole.USER;
+  } catch (error) {
+    return UserRole.USER;
+  }
+};
+
+// Admin: Get all users
+export const getAllUsers = async (): Promise<UserProfile[]> => {
+  try {
+    const snapshot = await getDocs(collection(db, 'users'));
+    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+  } catch (error) {
+    return [];
+  }
+};
+
+// Admin: Update user channels
+export const updateUserChannels = async (uid: string, channels: string[]) => {
+  try {
+    await updateDoc(doc(db, 'users', uid), {
+      allowedChannels: channels
+    });
+  } catch (error) {
+    console.error("Error updating channels:", error);
+    throw error;
+  }
 };
 
 export const getProductCodes = async (): Promise<ProductCode[]> => {

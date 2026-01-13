@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Layout from '../components/Layout';
-import { subscribeToChat, sendChatMessage, auth } from '../services/firebase';
+import { subscribeToChat, sendChatMessage, auth, getUserProfile } from '../services/firebase';
 import { ChatMessage, ChatChannel, UserRole } from '../types';
-import { Send, Hash, MessageCircle, Shield, CheckCircle, Users, Menu, X } from 'lucide-react';
+import { Send, Hash, MessageCircle, Shield, CheckCircle, Users, Menu, X, Lock, Key } from 'lucide-react';
 
 const CHANNELS: ChatChannel[] = [
-  { id: 'general', name: 'Sảnh Chung', description: 'Giao lưu, chém gió tổng hợp', icon: 'MessagesSquare' },
-  { id: 'pig', name: 'Hội Nuôi Heo', description: 'Kỹ thuật & Giá cả Heo', icon: 'PiggyBank' },
-  { id: 'chicken', name: 'Hội Nuôi Gà', description: 'Kỹ thuật & Giá cả Gà', icon: 'Egg' },
-  { id: 'technical', name: 'Hỏi Kỹ Thuật', description: 'Hỗ trợ khẩn cấp từ BTE04', icon: 'Stethoscope' },
-  { id: 'market', name: 'Chợ Giống & Cám', description: 'Thông tin mua bán', icon: 'Store' },
+  { id: 'general', name: 'Sảnh Chung', description: 'Giao lưu, chém gió tổng hợp', icon: 'MessagesSquare', isRestricted: false },
+  { id: 'pig', name: 'Hội Nuôi Heo', description: 'Chuyên sâu kỹ thuật Heo', icon: 'PiggyBank', isRestricted: true },
+  { id: 'chicken', name: 'Hội Nuôi Gà', description: 'Chuyên sâu kỹ thuật Gà', icon: 'Egg', isRestricted: true },
+  { id: 'technical', name: 'Hỏi Kỹ Thuật', description: 'Hỗ trợ khẩn cấp từ BTE04', icon: 'Stethoscope', isRestricted: true },
+  { id: 'market', name: 'Chợ Giống & Cám', description: 'Thông tin mua bán kín', icon: 'Store', isRestricted: true },
 ];
 
 const CommunityChat: React.FC = () => {
@@ -17,18 +17,51 @@ const CommunityChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [allowedChannels, setAllowedChannels] = useState<string[]>(['general']);
+  const [isLoadingPerms, setIsLoadingPerms] = useState(true);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const currentUser = auth.currentUser || JSON.parse(localStorage.getItem('bte04_demo_user') || 'null');
   const userRole = currentUser?.role || UserRole.USER;
 
-  // Subscribe to real-time updates
+  // Load User Permissions
   useEffect(() => {
+    const fetchPerms = async () => {
+        if (currentUser) {
+            // Local fallback for demo or quick switch
+            if (currentUser.allowedChannels) {
+                setAllowedChannels(currentUser.allowedChannels);
+            }
+            // Fetch fresh from DB
+            const profile = await getUserProfile(currentUser.uid);
+            if (profile && profile.allowedChannels) {
+                setAllowedChannels(profile.allowedChannels);
+            } else if (userRole === UserRole.ADMIN) {
+                setAllowedChannels(CHANNELS.map(c => c.id));
+            }
+        }
+        setIsLoadingPerms(false);
+    };
+    fetchPerms();
+  }, [currentUser]);
+
+  const isAccessAllowed = (channelId: string) => {
+      if (userRole === UserRole.ADMIN) return true;
+      return allowedChannels.includes(channelId);
+  };
+
+  // Subscribe to real-time updates (only if allowed)
+  useEffect(() => {
+    if (!isAccessAllowed(currentChannel.id)) {
+        setMessages([]);
+        return;
+    }
+
     const unsubscribe = subscribeToChat(currentChannel.id, (msgs) => {
       setMessages(msgs);
     });
     return () => unsubscribe();
-  }, [currentChannel]);
+  }, [currentChannel, allowedChannels]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -40,7 +73,7 @@ const CommunityChat: React.FC = () => {
     if (!inputText.trim() || !currentUser) return;
 
     const text = inputText;
-    setInputText(''); // Optimistic clear
+    setInputText(''); 
 
     await sendChatMessage({
       text: text,
@@ -86,46 +119,57 @@ const CommunityChat: React.FC = () => {
           </div>
           
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {CHANNELS.map(channel => (
-              <button
-                key={channel.id}
-                onClick={() => {
-                  setCurrentChannel(channel);
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-all ${
-                  currentChannel.id === channel.id 
-                    ? 'bg-white shadow-sm border border-gray-200 text-primary-700 font-bold' 
-                    : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
-                }`}
-              >
-                <div className={`p-2 rounded-md ${currentChannel.id === channel.id ? 'bg-primary-100' : 'bg-gray-200'}`}>
-                    <Hash size={16} />
-                </div>
-                <div>
-                  <div className="text-sm">{channel.name}</div>
-                  <div className="text-[10px] text-gray-400 truncate w-32">{channel.description}</div>
-                </div>
-              </button>
-            ))}
+            {CHANNELS.map(channel => {
+              const locked = !isAccessAllowed(channel.id);
+              return (
+                <button
+                    key={channel.id}
+                    onClick={() => {
+                    setCurrentChannel(channel);
+                    setIsSidebarOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-all relative ${
+                    currentChannel.id === channel.id 
+                        ? 'bg-white shadow-sm border border-gray-200 text-primary-700 font-bold' 
+                        : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                    }`}
+                >
+                    <div className={`p-2 rounded-md relative ${currentChannel.id === channel.id ? 'bg-primary-100' : 'bg-gray-200'}`}>
+                        <Hash size={16} />
+                        {locked && (
+                            <div className="absolute -top-1 -right-1 bg-gray-500 rounded-full p-0.5 border-2 border-white">
+                                <Lock size={10} className="text-white"/>
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <div className="text-sm flex items-center gap-1">
+                            {channel.name}
+                        </div>
+                        <div className="text-[10px] text-gray-400 truncate w-32">{channel.description}</div>
+                    </div>
+                </button>
+              );
+            })}
           </div>
           
           <div className="p-4 border-t bg-gray-100">
              <div className="flex items-center gap-2 text-gray-500 text-xs">
                 <Users size={14} /> 
-                <span>Đang trực tuyến: Nhiều</span>
+                <span>Trực tuyến: Nhiều</span>
              </div>
           </div>
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col w-full">
+        <div className="flex-1 flex flex-col w-full relative">
           {/* Header */}
           <div className="h-16 border-b flex items-center px-6 md:px-6 pl-16 bg-white justify-between">
             <div>
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
                     <Hash size={18} className="text-gray-400" />
                     {currentChannel.name}
+                    {!isAccessAllowed(currentChannel.id) && <Lock size={16} className="text-red-500"/>}
                 </h3>
                 <p className="text-xs text-gray-500 hidden md:block">{currentChannel.description}</p>
             </div>
@@ -136,69 +180,93 @@ const CommunityChat: React.FC = () => {
             )}
           </div>
 
-          {/* Messages List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 scroll-smooth">
-            {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
-                    <MessageCircle size={64} strokeWidth={1} />
-                    <p className="mt-2">Chưa có tin nhắn nào. Hãy bắt đầu!</p>
-                </div>
-            ) : (
-                messages.map((msg, index) => {
-                  const isMe = msg.userId === currentUser.uid;
-                  const showHeader = index === 0 || messages[index - 1].userId !== msg.userId;
-                  const isAdminOrTech = msg.userRole === UserRole.ADMIN || msg.userRole === UserRole.TECHNICAL;
-
-                  return (
-                    <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                      {showHeader && (
-                        <div className={`flex items-center gap-1 mb-1 px-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                          <span className={`text-xs font-bold ${isAdminOrTech ? 'text-primary-700' : 'text-gray-600'}`}>
-                            {msg.userName}
-                          </span>
-                          {getRoleBadge(msg.userRole)}
-                          <span className="text-[10px] text-gray-400 ml-2">{formatTime(msg.createdAt)}</span>
-                        </div>
-                      )}
-                      <div 
-                        className={`
-                          px-4 py-2 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm shadow-sm break-words
-                          ${isMe 
-                            ? 'bg-primary-600 text-white rounded-tr-none' 
-                            : isAdminOrTech 
-                                ? 'bg-white border-2 border-primary-100 text-gray-800 rounded-tl-none' 
-                                : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'
-                          }
-                        `}
-                      >
-                        {msg.text}
+          {/* Access Control Overlay */}
+          {!isAccessAllowed(currentChannel.id) ? (
+              <div className="absolute inset-0 top-16 bg-gray-50/90 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md border border-gray-200">
+                      <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Lock size={32} className="text-gray-500" />
                       </div>
-                    </div>
-                  );
-                })
-            )}
-            <div ref={bottomRef} />
-          </div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">Nhóm Chat Hạn Chế</h3>
+                      <p className="text-gray-600 mb-6">
+                          Nhóm <b>{currentChannel.name}</b> dành riêng cho các thành viên được xét duyệt. 
+                          Để tham gia, vui lòng liên hệ Admin hoặc Kỹ thuật viên để được thêm vào nhóm.
+                      </p>
+                      <button 
+                        onClick={() => setCurrentChannel(CHANNELS[0])}
+                        className="text-primary-600 font-bold hover:underline"
+                      >
+                          Quay lại Sảnh Chung
+                      </button>
+                  </div>
+              </div>
+          ) : (
+            <>
+                {/* Messages List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 scroll-smooth">
+                    {messages.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                            <MessageCircle size={64} strokeWidth={1} />
+                            <p className="mt-2">Chưa có tin nhắn nào. Hãy bắt đầu!</p>
+                        </div>
+                    ) : (
+                        messages.map((msg, index) => {
+                        const isMe = msg.userId === currentUser.uid;
+                        const showHeader = index === 0 || messages[index - 1].userId !== msg.userId;
+                        const isAdminOrTech = msg.userRole === UserRole.ADMIN || msg.userRole === UserRole.TECHNICAL;
 
-          {/* Input Area */}
-          <div className="p-4 bg-white border-t">
-            <form onSubmit={handleSend} className="flex gap-2">
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Nhập tin nhắn vào #${currentChannel.name}...`}
-                className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-              />
-              <button 
-                type="submit" 
-                disabled={!inputText.trim()}
-                className="bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-              >
-                <Send size={20} />
-              </button>
-            </form>
-          </div>
+                        return (
+                            <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                            {showHeader && (
+                                <div className={`flex items-center gap-1 mb-1 px-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                                <span className={`text-xs font-bold ${isAdminOrTech ? 'text-primary-700' : 'text-gray-600'}`}>
+                                    {msg.userName}
+                                </span>
+                                {getRoleBadge(msg.userRole)}
+                                <span className="text-[10px] text-gray-400 ml-2">{formatTime(msg.createdAt)}</span>
+                                </div>
+                            )}
+                            <div 
+                                className={`
+                                px-4 py-2 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm shadow-sm break-words
+                                ${isMe 
+                                    ? 'bg-primary-600 text-white rounded-tr-none' 
+                                    : isAdminOrTech 
+                                        ? 'bg-white border-2 border-primary-100 text-gray-800 rounded-tl-none' 
+                                        : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'
+                                }
+                                `}
+                            >
+                                {msg.text}
+                            </div>
+                            </div>
+                        );
+                        })
+                    )}
+                    <div ref={bottomRef} />
+                </div>
+
+                {/* Input Area */}
+                <div className="p-4 bg-white border-t">
+                    <form onSubmit={handleSend} className="flex gap-2">
+                    <input
+                        type="text"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder={`Nhập tin nhắn vào #${currentChannel.name}...`}
+                        className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                    />
+                    <button 
+                        type="submit" 
+                        disabled={!inputText.trim()}
+                        className="bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                    >
+                        <Send size={20} />
+                    </button>
+                    </form>
+                </div>
+            </>
+          )}
         </div>
       </div>
     </Layout>
