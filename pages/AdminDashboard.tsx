@@ -35,16 +35,29 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Hàm tự động tạo dữ liệu mẫu lên Firebase
-  const handleSeedData = async () => {
-    if (!confirm('Hành động này sẽ thêm dữ liệu mẫu (Mã sản phẩm & Bài viết) vào Database. Tiếp tục?')) return;
+  // Helper to generate random code
+  const generateRandomSuffix = (length: number) => {
+      const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+  };
+
+  // Hàm tự động tạo 10 mã mới
+  const handleGenerateCodes = async () => {
+    if (!confirm('Hành động này sẽ TẠO THÊM 10 mã kích hoạt ngẫu nhiên mới. Tiếp tục?')) return;
     setSeeding(true);
     try {
       const batch = writeBatch(db);
 
-      // 1. Tạo mẫu 10 mã sản phẩm
+      // 1. Tạo 10 mã sản phẩm ngẫu nhiên
       for (let i = 1; i <= 10; i++) {
-        const codeString = `BTE04-TEST-${i.toString().padStart(3, '0')}`;
+        // Format: BTE04-{NĂM}-{RANDOM_6_CHARS}
+        const suffix = generateRandomSuffix(6);
+        const codeString = `BTE04-2024-${suffix}`;
+        
         const codeRef = doc(db, 'product_codes', codeString);
         batch.set(codeRef, {
           id: codeString,
@@ -53,7 +66,7 @@ const AdminDashboard: React.FC = () => {
         });
       }
 
-      // 2. Tạo 2 bài viết mẫu nếu chưa có
+      // 2. Tạo bài viết mẫu nếu chưa có (chỉ chạy khi chưa có bài nào)
       if (articles.length === 0) {
         const art1Ref = doc(collection(db, 'articles'));
         batch.set(art1Ref, {
@@ -74,8 +87,9 @@ const AdminDashboard: React.FC = () => {
       }
 
       await batch.commit();
-      alert('Đã khởi tạo dữ liệu thành công! Hãy reload lại trang.');
+      alert('Đã tạo thành công 10 mã mới! Kiểm tra tab "Mã SP".');
       loadData();
+      setActiveTab('codes'); // Chuyển ngay sang tab codes để xem
     } catch (error) {
       console.error(error);
       alert('Lỗi khởi tạo: ' + (error as any).message);
@@ -104,14 +118,14 @@ const AdminDashboard: React.FC = () => {
            <p className="text-sm text-gray-500">Xin chào Admin, quản lý toàn bộ hoạt động tại đây.</p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
            <button 
-             onClick={handleSeedData}
+             onClick={handleGenerateCodes}
              disabled={seeding}
-             className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition"
+             className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition shadow-md"
            >
-             {seeding ? <Loader2 className="animate-spin" size={18} /> : <Database size={18} />}
-             Khởi tạo Data Mẫu
+             {seeding ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+             Tạo 10 Mã Mới
            </button>
            
            <div className="flex bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
@@ -142,11 +156,11 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-            <h3 className="font-bold text-blue-900 mb-2">Hướng dẫn nhanh cho Admin mới</h3>
+            <h3 className="font-bold text-blue-900 mb-2">Hướng dẫn nhanh cho Admin</h3>
             <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
-              <li>Nếu Database trống, hãy nhấn nút <b>"Khởi tạo Data Mẫu"</b> ở góc trên bên phải.</li>
-              <li>Hệ thống sẽ tạo ra 10 mã sản phẩm dùng thử (VD: <code>BTE04-TEST-001</code>).</li>
-              <li>Bạn có thể dùng các mã này để đăng ký tài khoản thành viên mới ở trang Login.</li>
+              <li>Để có mã kích hoạt cho khách hàng, hãy nhấn nút <b>"Tạo 10 Mã Mới"</b> ở góc phải.</li>
+              <li>Mã sẽ được tạo ngẫu nhiên dạng <code>BTE04-2024-XXXXXX</code>.</li>
+              <li>Vào tab <b>"Mã SP"</b> để copy mã và gửi cho khách hàng.</li>
             </ul>
           </div>
         </div>
@@ -161,7 +175,7 @@ const AdminDashboard: React.FC = () => {
              </button>
            </div>
            {articles.length === 0 ? (
-             <div className="p-8 text-center text-gray-500">Chưa có bài viết nào. Hãy thêm bài mới hoặc Khởi tạo data mẫu.</div>
+             <div className="p-8 text-center text-gray-500">Chưa có bài viết nào. Hãy thêm bài mới.</div>
            ) : (
              <table className="w-full text-left text-sm">
               <thead className="bg-gray-50">
@@ -199,7 +213,7 @@ const AdminDashboard: React.FC = () => {
             <span className="text-xs bg-gray-100 px-2 py-1 rounded">Tổng: {codes.length}</span>
           </div>
           {codes.length === 0 ? (
-             <div className="p-8 text-center text-gray-500">Chưa có mã sản phẩm nào. Hãy nhấn <b>"Khởi tạo Data Mẫu"</b>.</div>
+             <div className="p-8 text-center text-gray-500">Chưa có mã sản phẩm nào. Hãy nhấn <b>"Tạo 10 Mã Mới"</b>.</div>
            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -213,7 +227,7 @@ const AdminDashboard: React.FC = () => {
                 <tbody className="divide-y divide-gray-100">
                   {codes.map((code) => (
                     <tr key={code.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-mono font-medium text-primary-700">{code.id}</td>
+                      <td className="px-6 py-4 font-mono font-bold text-primary-700 select-all">{code.id}</td>
                       <td className="px-6 py-4">
                         {code.isUsed ? (
                           <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">Đã dùng</span>

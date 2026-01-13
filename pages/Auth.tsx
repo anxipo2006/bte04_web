@@ -30,6 +30,15 @@ const Auth: React.FC = () => {
         navigate('/dashboard');
       } else if (viewState === 'register') {
         // --- REGISTER ---
+        // 1. Password Validation
+        if (password.length < 6) {
+            throw new Error("Mật khẩu phải có ít nhất 6 ký tự.");
+        }
+        if (!/[A-Z]/.test(password)) {
+            throw new Error("Mật khẩu phải chứa ít nhất 1 chữ cái VIẾT HOA.");
+        }
+
+        // 2. Code Validation
         const isValid = await verifyProductCode(productCode.toUpperCase().trim());
         if (!isValid) {
           throw new Error("Mã sản phẩm không hợp lệ hoặc đã được sử dụng.");
@@ -88,7 +97,9 @@ const Auth: React.FC = () => {
         setError('Số điện thoại này đã được đăng ký.');
       } else if (errorCode === 'auth/user-not-found') {
         setError('Tài khoản không tồn tại.');
-      } else if (errorMessage.includes('Mã sản phẩm')) {
+      } else if (errorCode === 'auth/weak-password') {
+        setError('Mật khẩu quá yếu. Vui lòng chọn mật khẩu mạnh hơn.');
+      } else if (errorMessage.includes('Mã sản phẩm') || errorMessage.includes('Mật khẩu')) {
         setError(errorMessage);
       } else {
         setError(errorMessage || 'Có lỗi xảy ra.');
@@ -152,7 +163,9 @@ const Auth: React.FC = () => {
 
             {viewState !== 'forgot' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mật khẩu {viewState === 'register' && <span className="text-red-500">*</span>}
+                </label>
                 <input
                   type="password"
                   required
@@ -161,6 +174,11 @@ const Auth: React.FC = () => {
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 outline-none transition"
                   placeholder="••••••"
                 />
+                {viewState === 'register' && (
+                    <p className="text-xs text-gray-400 mt-1">
+                        Yêu cầu: Tối thiểu 6 ký tự, có ít nhất 1 chữ in hoa.
+                    </p>
+                )}
                 {viewState === 'login' && (
                   <div className="flex justify-end mt-1">
                     <button 
