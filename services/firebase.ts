@@ -107,13 +107,15 @@ export const getArticleById = async (id: string): Promise<Article | null> => {
 
 export const createArticle = async (article: Partial<Article>): Promise<void> => {
   try {
+    // Nếu status chưa được set, mặc định là approved (cho Admin), nhưng nên để pending cho user
+    // Logic đó xử lý ở UI hoặc rules. Ở đây chỉ đẩy data lên.
     const newArticleData = {
       likes: [],
       comments: [],
       views: 0,
       date: new Date().toISOString().split('T')[0],
       createdAt: Date.now(),
-      status: 'approved', 
+      status: article.status || 'approved', // Default
       ...article,
     };
     await addDoc(collection(db, 'articles'), newArticleData);
@@ -353,8 +355,9 @@ export const createUserProfile = async (uid: string, phoneNumber: string, code: 
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>) => {
   try {
     // 1. Update Firestore Document
+    // Sử dụng setDoc với { merge: true } để an toàn hơn updateDoc nếu document chưa tồn tại
     const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, data);
+    await setDoc(userRef, data, { merge: true });
 
     // 2. Sync Display Name with Firebase Auth if provided
     if (data.displayName && auth.currentUser) {
@@ -403,9 +406,10 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
 // Admin: Update user channels
 export const updateUserChannels = async (uid: string, channels: string[]) => {
   try {
-    await updateDoc(doc(db, 'users', uid), {
+    // Dùng setDoc merge để tránh lỗi nếu user doc thiếu
+    await setDoc(doc(db, 'users', uid), {
       allowedChannels: channels
-    });
+    }, { merge: true });
   } catch (error) {
     console.error("Error updating channels:", error);
     throw error;

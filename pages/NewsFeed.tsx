@@ -88,6 +88,16 @@ const NewsFeed: React.FC = () => {
       setSubmitting(true);
       const user = auth.currentUser || JSON.parse(localStorage.getItem('bte04_demo_user') || 'null');
       
+      if (!user) {
+          alert('Vui lòng đăng nhập lại.');
+          setSubmitting(false);
+          return;
+      }
+
+      // Determine status based on role
+      const isManagement = currentUserRole === UserRole.ADMIN || currentUserRole === UserRole.TECHNICAL;
+      const initialStatus = isManagement ? 'approved' : 'pending';
+
       try {
         await createArticle({
             title: postTitle || (postType === 'experience' ? 'Chia sẻ từ thành viên' : 'Tin rao vặt'),
@@ -103,7 +113,7 @@ const NewsFeed: React.FC = () => {
             location: postLocation,
             contactPhone: postPhone,
             tags: [],
-            status: 'approved' 
+            status: initialStatus
         });
         
         // Reset form
@@ -114,8 +124,16 @@ const NewsFeed: React.FC = () => {
         setPostLocation('');
         setShowPostModal(false);
         setActiveTab(postType === 'experience' ? 'experience' : 'market');
+        
+        if (!isManagement) {
+            alert('Bài viết của bạn đã được gửi và đang chờ duyệt.');
+        } else {
+            alert('Đăng bài thành công!');
+        }
+
       } catch (error) {
-          alert('Lỗi đăng bài');
+          console.error(error);
+          alert('Lỗi đăng bài: ' + (error as any).message);
       } finally {
           setSubmitting(false);
       }
