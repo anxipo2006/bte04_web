@@ -1,8 +1,5 @@
-import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  signOut as firebaseSignOut
-} from "firebase/auth";
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
 import { 
   getFirestore, 
   doc, 
@@ -10,13 +7,13 @@ import {
   getDoc, 
   collection, 
   getDocs, 
-  updateDoc,
-  deleteDoc,
-  addDoc,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
+  updateDoc, 
+  deleteDoc, 
+  addDoc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
   limit
 } from "firebase/firestore";
 import { ProductCode, Article, UserProfile, UserRole, Question, SpinPrize, ChatMessage } from '../types';
@@ -54,8 +51,8 @@ const firebaseConfig = {
 // Nếu không có biến môi trường, Master Key sẽ là chuỗi rỗng => Không ai đăng nhập được Admin.
 const MASTER_KEY = getEnv('VITE_ADMIN_SECRET_CODE');
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+const app = firebase.initializeApp(firebaseConfig);
+export const auth = app.auth();
 export const db = getFirestore(app);
 
 export const formatPhoneToEmail = (phone: string) => `${phone}@bte04.com`;
@@ -74,7 +71,7 @@ export const SPIN_PRIZES: SpinPrize[] = [
 export const logoutUser = async () => {
   try {
     localStorage.removeItem(DEMO_USER_KEY);
-    await firebaseSignOut(auth);
+    await auth.signOut();
   } catch (e) {
     console.error(e);
   }
@@ -350,6 +347,24 @@ export const createUserProfile = async (uid: string, phoneNumber: string, code: 
     await setDoc(doc(db, 'users', uid), userProfile);
   } catch (error) {
     console.error("Error creating profile:", error);
+  }
+};
+
+export const updateUserProfile = async (uid: string, data: Partial<UserProfile>) => {
+  try {
+    // 1. Update Firestore Document
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, data);
+
+    // 2. Sync Display Name with Firebase Auth if provided
+    if (data.displayName && auth.currentUser) {
+       await auth.currentUser.updateProfile({
+           displayName: data.displayName
+       });
+    }
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
   }
 };
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, formatPhoneToEmail, verifyProductCode, markCodeAsUsed, createUserProfile, DEMO_USER_KEY } from '../services/firebase';
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 
@@ -37,7 +36,7 @@ const Auth: React.FC = () => {
     try {
       if (viewState === 'login') {
         // --- LOGIN ---
-        await signInWithEmailAndPassword(auth, email, password);
+        await auth.signInWithEmailAndPassword(email, password);
         navigate('/dashboard');
       } else if (viewState === 'register') {
         // --- REGISTER ---
@@ -55,11 +54,13 @@ const Auth: React.FC = () => {
           throw new Error("Mã sản phẩm không hợp lệ hoặc đã được sử dụng.");
         }
 
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        await createUserProfile(user.uid, cleanPhone, productCode.toUpperCase().trim());
-        await markCodeAsUsed(productCode.toUpperCase().trim(), user.uid);
+        if (user) {
+            await createUserProfile(user.uid, cleanPhone, productCode.toUpperCase().trim());
+            await markCodeAsUsed(productCode.toUpperCase().trim(), user.uid);
+        }
 
         navigate('/dashboard');
       } else if (viewState === 'forgot') {
@@ -70,7 +71,7 @@ const Auth: React.FC = () => {
         
         if (cleanPhone.includes('@')) {
             // Nếu họ nhập email thật (Admin)
-            await sendPasswordResetEmail(auth, cleanPhone);
+            await auth.sendPasswordResetEmail(cleanPhone);
             setSuccessMsg('Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.');
         } else {
             // Nếu nhập SĐT
@@ -198,7 +199,7 @@ const Auth: React.FC = () => {
                 />
                 {viewState === 'register' && (
                     <p className="text-xs text-gray-400 mt-1">
-                        Yêu cầu: Tối thiểu 6 ký tự, có ít nhất 1 chữ in hoa.
+                        Yêu cầu: Tối thiểu 6 ký tự, có ít nhất 1 chữ cái VIẾT HOA.
                     </p>
                 )}
                 {viewState === 'login' && (

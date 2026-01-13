@@ -11,6 +11,7 @@ export interface UserProfile {
   activatedCode: string;
   createdAt: number;
   displayName?: string;
+  age?: number; // Added Age field
   lastSpinTime?: number;
   allowedChannels?: string[]; // Danh sách ID nhóm chat được phép vào
 }

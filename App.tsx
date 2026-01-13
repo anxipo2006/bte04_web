@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserRole, DEMO_USER_KEY } from './services/firebase';
 import { UserRole } from './types';
 import Landing from './pages/Landing';
@@ -41,7 +40,7 @@ const App: React.FC = () => {
     };
 
     // Firebase Auth Listener
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         if (currentUser.email?.startsWith('admin')) {

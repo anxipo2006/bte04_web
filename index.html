@@ -5,18 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BTE04 Community</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Be Vietnam Pro -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
     <!-- CKEditor 5 Build Classic -->
     <script src="https://cdn.ckeditor.com/ckeditor5/41.1.0/classic/ckeditor.js"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
+            fontFamily: {
+              sans: ['"Be Vietnam Pro"', 'sans-serif'],
+            },
             colors: {
               primary: {
                 50: '#f0fdf4',
                 100: '#dcfce7',
                 500: '#22c55e', // Green
+                600: '#16a34a',
                 700: '#15803d',
+                800: '#166534',
                 900: '#14532d',
               },
               earth: {
@@ -25,6 +35,20 @@
                 500: '#f59e0b',
                 700: '#b45309', // Brown-ish
                 900: '#78350f',
+              },
+              // Override gray with slate for better contrast text
+              gray: {
+                 50: '#f8fafc',
+                 100: '#f1f5f9',
+                 200: '#e2e8f0',
+                 300: '#cbd5e1',
+                 400: '#94a3b8',
+                 500: '#64748b',
+                 600: '#475569',
+                 700: '#334155',
+                 800: '#1e293b',
+                 900: '#0f172a',
+                 950: '#020617',
               }
             }
           }
@@ -32,6 +56,9 @@
       }
     </script>
     <style>
+      body {
+        font-family: 'Be Vietnam Pro', sans-serif;
+      }
       /* Prevent text selection for content protection */
       .protected-content {
         -webkit-user-select: none;
@@ -49,7 +76,7 @@
       }
       .ck-content {
         border-radius: 0 0 0.5rem 0.5rem !important;
-        font-family: ui-sans-serif, system-ui, sans-serif !important;
+        font-family: 'Be Vietnam Pro', sans-serif !important;
       }
     </style>
   <script type="importmap">
@@ -65,7 +92,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-50 text-gray-800">
+  <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
   </body>
