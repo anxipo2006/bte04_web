@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Layout from '../components/Layout';
-import { subscribeToChat, sendChatMessage, auth, getUserProfile } from '../services/firebase';
-import { ChatMessage, ChatChannel, UserRole } from '../types';
-import { Send, Hash, MessageCircle, Shield, CheckCircle, Users, Menu, X, Lock, Key, Loader2 } from 'lucide-react';
+import { subscribeToChat, sendChatMessage, auth, getUserProfile, getAllUsers, updateUserChannels } from '../services/firebase';
+import { ChatMessage, ChatChannel, UserRole, UserProfile } from '../types';
+import { Send, Hash, MessageCircle, Shield, CheckCircle, Users, Menu, X, Lock, Key, Loader2, UserPlus, Search, Check, Plus } from 'lucide-react';
 
 const CHANNELS: ChatChannel[] = [
   { id: 'general', name: 'Sảnh Chung', description: 'Giao lưu, chém gió tổng hợp', icon: 'MessagesSquare', isRestricted: false },
@@ -24,6 +24,12 @@ const CommunityChat: React.FC = () => {
   const [isLoadingPerms, setIsLoadingPerms] = useState(true);
   const [isChatLoading, setIsChatLoading] = useState(false);
   
+  // State quản lý thành viên (Admin only)
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [managingLoading, setManagingLoading] = useState(false);
+  
   const bottomRef = useRef<HTMLDivElement>(null);
   const currentUser = auth.currentUser || JSON.parse(localStorage.getItem('bte04_demo_user') || 'null');
 
@@ -43,10 +49,12 @@ const CommunityChat: React.FC = () => {
             } else {
                 // Trường hợp User thường, lấy từ DB để chắc chắn
                 const profile = await getUserProfile(currentUser.uid);
-                if (profile) role = profile.role;
+                if (profile && profile.role) {
+                    role = profile.role;
+                }
             }
             
-            setUserRole(role);
+            setUserRole(role || UserRole.USER);
 
             // 2. Xác định Channels được phép vào
             if (role === UserRole.ADMIN) {
@@ -120,10 +128,52 @@ const CommunityChat: React.FC = () => {
       text: text,
       userId: currentUser.uid,
       userName: currentUser.displayName || 'Thành viên',
-      userRole: userRole,
+      userRole: userRole || UserRole.USER,
       channelId: currentChannel.id
     });
   };
+
+  // --- ADMIN MANAGEMENT LOGIC ---
+  const handleOpenManageModal = async () => {
+      setShowManageModal(true);
+      setManagingLoading(true);
+      try {
+          const users = await getAllUsers();
+          setAllUsers(users);
+      } catch (error) {
+          console.error("Error fetching users", error);
+      } finally {
+          setManagingLoading(false);
+      }
+  };
+
+  const handleToggleMemberAccess = async (user: UserProfile) => {
+      const currentChannels = user.allowedChannels || [];
+      const isMember = currentChannels.includes(currentChannel.id);
+      let newChannels;
+      
+      if (isMember) {
+          newChannels = currentChannels.filter(c => c !== currentChannel.id);
+      } else {
+          newChannels = [...currentChannels, currentChannel.id];
+      }
+      
+      // Optimistic Update
+      setAllUsers(prev => prev.map(u => u.uid === user.uid ? { ...u, allowedChannels: newChannels } : u));
+      
+      try {
+          await updateUserChannels(user.uid, newChannels);
+      } catch (error) {
+          alert('Lỗi cập nhật quyền');
+          // Revert logic would go here
+      }
+  };
+
+  const filteredUsers = allUsers.filter(u => 
+      (u.displayName?.toLowerCase() || '').includes(memberSearchTerm.toLowerCase()) ||
+      (u.phoneNumber?.includes(memberSearchTerm)) || 
+      (u.email?.includes(memberSearchTerm))
+  );
 
   const getRoleBadge = (role: UserRole) => {
     if (role === UserRole.ADMIN) return <Shield size={14} className="text-red-500 fill-red-100" />;
@@ -217,11 +267,26 @@ const CommunityChat: React.FC = () => {
                 </h3>
                 <p className="text-xs text-gray-500 hidden md:block">{currentChannel.description}</p>
             </div>
-            {currentChannel.id === 'technical' && (
-                <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-bold animate-pulse">
-                    Hỗ trợ trực tiếp
-                </span>
-            )}
+            
+            <div className="flex items-center gap-2">
+                {currentChannel.id === 'technical' && (
+                    <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-bold animate-pulse mr-2">
+                        Hỗ trợ trực tiếp
+                    </span>
+                )}
+                
+                {/* Admin Add Member Button */}
+                {userRole === UserRole.ADMIN && (
+                    <button 
+                        onClick={handleOpenManageModal}
+                        className="p-2 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg flex items-center gap-2 transition-colors border border-primary-100"
+                        title="Quản lý thành viên nhóm này"
+                    >
+                        <UserPlus size={18} />
+                        <span className="text-sm font-bold hidden md:inline">Thành viên</span>
+                    </button>
+                )}
+            </div>
           </div>
 
           {/* Access Control Overlay */}
@@ -317,6 +382,79 @@ const CommunityChat: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ADMIN MANAGE MODAL */}
+      {showManageModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl w-full max-w-lg flex flex-col max-h-[80vh] shadow-2xl animate-in fade-in zoom-in duration-200">
+                  <div className="p-4 border-b flex justify-between items-center bg-primary-50 rounded-t-2xl">
+                      <div>
+                        <h3 className="font-bold text-lg text-primary-900">Quản lý thành viên</h3>
+                        <p className="text-xs text-primary-700">Kênh: <b>{currentChannel.name}</b></p>
+                      </div>
+                      <button onClick={() => setShowManageModal(false)} className="text-gray-500 hover:text-red-500"><X size={24}/></button>
+                  </div>
+                  
+                  <div className="p-4 border-b">
+                     <div className="relative">
+                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Tìm tên, SĐT hoặc Email..." 
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                            value={memberSearchTerm}
+                            onChange={(e) => setMemberSearchTerm(e.target.value)}
+                        />
+                     </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-2">
+                      {managingLoading ? (
+                          <div className="flex justify-center py-8"><Loader2 className="animate-spin text-primary-500"/></div>
+                      ) : (
+                          <div className="space-y-1">
+                              {filteredUsers.length === 0 ? (
+                                  <p className="text-center text-gray-400 py-4 text-sm">Không tìm thấy thành viên nào.</p>
+                              ) : filteredUsers.map(user => {
+                                  const hasAccess = user.allowedChannels?.includes(currentChannel.id);
+                                  const isAdmin = user.role === UserRole.ADMIN;
+                                  return (
+                                      <div key={user.uid} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg group border border-transparent hover:border-gray-100 transition-all">
+                                          <div className="flex items-center gap-3">
+                                              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">
+                                                  {user.displayName ? user.displayName[0].toUpperCase() : 'U'}
+                                              </div>
+                                              <div>
+                                                  <p className="font-bold text-sm text-gray-800">{user.displayName || 'Không tên'}</p>
+                                                  <p className="text-xs text-gray-500">{user.phoneNumber || user.email}</p>
+                                              </div>
+                                          </div>
+                                          
+                                          {isAdmin ? (
+                                              <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded">Admin</span>
+                                          ) : (
+                                              <button 
+                                                onClick={() => handleToggleMemberAccess(user)}
+                                                className={`
+                                                    px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all
+                                                    ${hasAccess 
+                                                        ? 'bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-700' 
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700'
+                                                    }
+                                                `}
+                                              >
+                                                  {hasAccess ? <><Check size={12}/> Đã tham gia</> : <><Plus size={12}/> Thêm vào</>}
+                                              </button>
+                                          )}
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
     </Layout>
   );
 };

@@ -7,6 +7,7 @@ export enum UserRole {
 export interface UserProfile {
   uid: string;
   phoneNumber: string;
+  email?: string; // Added optional email field
   role: UserRole;
   activatedCode: string;
   createdAt: number;
