@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getArticles, auth, getUserRole, createArticle } from '../services/firebase';
 import { Article, UserRole, ArticleType } from '../types';
-import { Search, Calendar, Eye, PenTool, ShoppingBag, MessageSquare, MapPin, Phone, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Search, Calendar, Eye, PenTool, ShoppingBag, MessageSquare, MapPin, Phone, Upload, X, Image as ImageIcon, Info, ArrowRight, ShieldCheck, Users } from 'lucide-react';
 import Layout from '../components/Layout';
 
 const NewsFeed: React.FC = () => {
@@ -123,57 +123,97 @@ const NewsFeed: React.FC = () => {
 
   const canCreateOfficial = currentUserRole === UserRole.ADMIN || currentUserRole === UserRole.TECHNICAL;
 
-  const TabButton = ({ id, label, icon: Icon }: any) => (
+  const TabButton = ({ id, label, icon: Icon, subLabel }: any) => (
       <button
         onClick={() => setActiveTab(id)}
-        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold transition-all ${
+        className={`flex-1 flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl transition-all border-2 ${
             activeTab === id 
-            ? 'bg-primary-700 text-white shadow-lg' 
-            : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+            ? 'bg-primary-50 border-primary-500 text-primary-900 shadow-sm' 
+            : 'bg-white border-transparent text-gray-500 hover:bg-gray-50'
         }`}
       >
-          <Icon size={18} />
-          <span className="text-sm md:text-base">{label}</span>
+          <div className="flex items-center gap-2">
+            <Icon size={20} className={activeTab === id ? 'text-primary-600' : 'text-gray-400'} />
+            <span className="font-bold text-sm md:text-base">{label}</span>
+          </div>
+          <span className="text-[10px] md:text-xs opacity-70">{subLabel}</span>
       </button>
   );
 
   return (
     <Layout userRole={currentUserRole}>
-      {/* Tabs */}
+      {/* Banner Về BTE04 (Yêu cầu mới) */}
+      <div className="mb-8 rounded-2xl bg-gradient-to-r from-primary-900 to-primary-700 text-white p-6 md:p-8 flex flex-col md:flex-row items-center justify-between shadow-lg relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div className="relative z-10 mb-4 md:mb-0">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 flex items-center gap-2">
+                <Info className="text-yellow-400" /> Về BTE04
+            </h2>
+            <p className="text-primary-100 max-w-xl">
+                Hệ sinh thái chăn nuôi toàn diện. Kết nối chuyên gia, chia sẻ kiến thức và cung cấp giải pháp dinh dưỡng tối ưu cho nhà nông.
+            </p>
+        </div>
+        <button 
+            onClick={() => navigate('/about')}
+            className="relative z-10 bg-white text-primary-900 hover:bg-primary-50 px-6 py-3 rounded-full font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap"
+        >
+            Tìm hiểu thêm <ArrowRight size={18}/>
+        </button>
+      </div>
+
+      {/* Tabs Phân loại (Yêu cầu mới) */}
+      <div className="mb-6">
+        <div className="flex flex-col md:flex-row gap-2 md:gap-4">
+            <TabButton 
+                id="official" 
+                label="Tin Tức BTE04" 
+                subLabel="Bài viết chính thức từ Ban Quản Trị" 
+                icon={ShieldCheck} 
+            />
+            <TabButton 
+                id="experience" 
+                label="Góc Chia Sẻ" 
+                subLabel="Kinh nghiệm thực tế từ Thành Viên" 
+                icon={Users} 
+            />
+            <TabButton 
+                id="market" 
+                label="Chợ Nhà Nông" 
+                subLabel="Mua bán - Rao vặt nông sản" 
+                icon={ShoppingBag} 
+            />
+        </div>
+      </div>
+
+      {/* Search & Action Bar */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
-        <div className="flex w-full md:w-auto overflow-x-auto gap-2 pb-2 md:pb-0 scrollbar-hide">
-            <TabButton id="official" label="Tin BTE04" icon={PenTool} />
-            <TabButton id="experience" label="Góc Chia Sẻ" icon={MessageSquare} />
-            <TabButton id="market" label="Chợ Nhà Nông" icon={ShoppingBag} />
+        <div className="relative w-full md:w-96">
+            <input
+                type="text"
+                placeholder="Tìm kiếm bài viết..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 outline-none shadow-sm"
+            />
+            <Search className="absolute left-3 top-3.5 text-gray-400" size={20} />
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-                <input
-                    type="text"
-                    placeholder="Tìm kiếm..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-200 focus:ring-2 focus:ring-primary-500 outline-none"
-                />
-                <Search className="absolute left-3 top-3.5 text-gray-400" size={20} />
-            </div>
-            <button 
-                onClick={() => {
-                    if (canCreateOfficial && activeTab === 'official') {
-                        navigate('/create-article');
-                    } else {
-                        setShowPostModal(true);
-                        // Default post type based on tab
-                        if (activeTab === 'market') setPostType('market_sell');
-                        else setPostType('experience');
-                    }
-                }}
-                className="bg-earth-500 text-white px-4 py-3 rounded-full font-bold hover:bg-earth-600 transition shadow-md whitespace-nowrap"
-            >
-                {canCreateOfficial && activeTab === 'official' ? 'Viết bài' : 'Đăng tin'}
-            </button>
-        </div>
+        <button 
+            onClick={() => {
+                if (canCreateOfficial && activeTab === 'official') {
+                    navigate('/create-article');
+                } else {
+                    setShowPostModal(true);
+                    // Default post type based on tab
+                    if (activeTab === 'market') setPostType('market_sell');
+                    else setPostType('experience');
+                }
+            }}
+            className="w-full md:w-auto bg-earth-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-earth-700 transition shadow-md flex items-center justify-center gap-2"
+        >
+            <PenTool size={18} />
+            {canCreateOfficial && activeTab === 'official' ? 'Viết bài (Admin)' : 'Đăng bài viết mới'}
+        </button>
       </div>
 
       {/* Content Grid */}
@@ -201,6 +241,7 @@ const NewsFeed: React.FC = () => {
                     {article.type === 'market_sell' && <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">CẦN BÁN</span>}
                     {article.type === 'market_buy' && <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">CẦN MUA</span>}
                     {(!article.type || article.type === 'official') && <span className="bg-primary-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">OFFICIAL</span>}
+                    {article.type === 'experience' && <span className="bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">THÀNH VIÊN</span>}
                  </div>
                  
                  {/* Price Overlay for Market */}
@@ -224,7 +265,7 @@ const NewsFeed: React.FC = () => {
                 )}
 
                 {!article.type?.includes('market') && (
-                    <p className="text-gray-500 text-sm line-clamp-3 mb-4 flex-1">
+                    <p className="text-gray-600 text-sm line-clamp-3 mb-4 flex-1">
                         {article.summary}
                     </p>
                 )}
@@ -236,7 +277,7 @@ const NewsFeed: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-1 font-medium text-gray-500">
                     {article.authorRole === UserRole.ADMIN || article.authorRole === UserRole.TECHNICAL 
-                        ? <span className="text-primary-600 flex items-center gap-1"><PenTool size={12}/> BTE04</span> 
+                        ? <span className="text-primary-600 flex items-center gap-1"><PenTool size={12}/> Ban Quản Trị</span> 
                         : article.author
                     }
                   </div>
@@ -296,7 +337,7 @@ const NewsFeed: React.FC = () => {
                             required={postType !== 'experience'}
                             value={postTitle}
                             onChange={(e) => setPostTitle(e.target.value)}
-                            className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                            className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
                             placeholder={postType === 'experience' ? 'VD: Kinh nghiệm nuôi heo...' : 'VD: Bán 50 con heo thịt...'}
                         />
                     </div>
@@ -310,7 +351,7 @@ const NewsFeed: React.FC = () => {
                                     type="text"
                                     value={postPrice}
                                     onChange={(e) => setPostPrice(e.target.value)}
-                                    className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                                    className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
                                     placeholder="Liên hệ"
                                 />
                             </div>
@@ -321,7 +362,7 @@ const NewsFeed: React.FC = () => {
                                     required
                                     value={postLocation}
                                     onChange={(e) => setPostLocation(e.target.value)}
-                                    className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                                    className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
                                     placeholder="VD: Đồng Nai"
                                 />
                             </div>
@@ -332,7 +373,7 @@ const NewsFeed: React.FC = () => {
                                     required
                                     value={postPhone}
                                     onChange={(e) => setPostPhone(e.target.value)}
-                                    className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                                    className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
                                     placeholder="0912..."
                                 />
                             </div>
@@ -347,7 +388,7 @@ const NewsFeed: React.FC = () => {
                             rows={5}
                             value={postContent}
                             onChange={(e) => setPostContent(e.target.value)}
-                            className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                            className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
                             placeholder="Mô tả chi tiết..."
                         />
                     </div>

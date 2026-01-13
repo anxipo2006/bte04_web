@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getProductCodes, getArticles, deleteArticle, getQuestions, db, getAllUsers, updateUserChannels } from '../services/firebase';
 import { ProductCode, Article, Question, UserProfile } from '../types';
 import Layout from '../components/Layout';
-import { Users, FileText, QrCode, Trash2, Edit, MessageSquare, Plus, Database, Loader2, UserCog, Check, X } from 'lucide-react';
+import { Users, FileText, QrCode, Trash2, Edit, MessageSquare, Plus, Database, Loader2, UserCog, Check, X, Shield, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { doc, setDoc, collection, writeBatch } from 'firebase/firestore';
 
@@ -141,7 +141,7 @@ const AdminDashboard: React.FC = () => {
                 {tab === 'overview' && 'Tổng quan'}
                 {tab === 'codes' && 'Mã SP'}
                 {tab === 'content' && 'Bài viết'}
-                {tab === 'users' && 'Thành viên'}
+                {tab === 'users' && 'Thành viên & Chat'}
               </button>
             ))}
           </div>
@@ -237,45 +237,61 @@ const AdminDashboard: React.FC = () => {
       
       {activeTab === 'users' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b">
-                <h3 className="font-bold text-gray-800">Quản lý thành viên & Cấp quyền Chat</h3>
+            <div className="px-6 py-6 border-b">
+                <h3 className="font-bold text-gray-800 text-lg mb-1">Xét duyệt quyền truy cập Chat</h3>
+                <p className="text-sm text-gray-500">Bấm vào các nút bên dưới để cấp quyền cho thành viên vào các nhóm kín.</p>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-100 text-gray-700">
                         <tr>
-                            <th className="px-6 py-3">Tên / SĐT</th>
-                            <th className="px-6 py-3">Vai trò</th>
-                            <th className="px-6 py-3 text-center">Heo</th>
-                            <th className="px-6 py-3 text-center">Gà</th>
-                            <th className="px-6 py-3 text-center">Thị Trường</th>
-                            <th className="px-6 py-3 text-center">Kỹ Thuật</th>
+                            <th className="px-6 py-4">Thành viên</th>
+                            <th className="px-6 py-4">Vai trò</th>
+                            <th className="px-6 py-4 text-center">Hội Nuôi Heo</th>
+                            <th className="px-6 py-4 text-center">Hội Nuôi Gà</th>
+                            <th className="px-6 py-4 text-center">Chợ Giống</th>
+                            <th className="px-6 py-4 text-center">Hỏi Kỹ Thuật</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {users.map(u => (
-                            <tr key={u.uid} className="hover:bg-gray-50">
+                            <tr key={u.uid} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="font-bold text-gray-800">{u.displayName || 'Không tên'}</div>
                                     <div className="text-xs text-gray-500">{u.phoneNumber || u.uid.substring(0,8)}</div>
                                 </td>
-                                <td className="px-6 py-4">{u.role}</td>
-                                {/* Permissions Checkboxes */}
+                                <td className="px-6 py-4">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                                        {u.role}
+                                    </span>
+                                </td>
+                                {/* Permissions Toggles */}
                                 {[
-                                    {id: 'pig', color: 'text-pink-600'}, 
-                                    {id: 'chicken', color: 'text-yellow-600'}, 
-                                    {id: 'market', color: 'text-green-600'},
-                                    {id: 'technical', color: 'text-blue-600'}
+                                    {id: 'pig', label: 'Heo', color: 'bg-pink-100 text-pink-700 border-pink-200'}, 
+                                    {id: 'chicken', label: 'Gà', color: 'bg-yellow-100 text-yellow-700 border-yellow-200'}, 
+                                    {id: 'market', label: 'Chợ', color: 'bg-green-100 text-green-700 border-green-200'},
+                                    {id: 'technical', label: 'Kỹ Thuật', color: 'bg-blue-100 text-blue-700 border-blue-200'}
                                 ].map(chan => {
                                     const hasAccess = u.allowedChannels?.includes(chan.id);
                                     return (
                                         <td key={chan.id} className="px-6 py-4 text-center">
                                             <button 
                                                 onClick={() => handleUpdateChannels(u.uid, u.allowedChannels, chan.id)}
-                                                className={`p-2 rounded-lg border transition-all ${hasAccess ? 'bg-primary-50 border-primary-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}
+                                                className={`
+                                                    relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+                                                    ${hasAccess ? 'bg-primary-600' : 'bg-gray-200'}
+                                                `}
                                             >
-                                                {hasAccess ? <Check size={16} className="text-primary-600"/> : <X size={16} className="text-gray-400"/>}
+                                                <span
+                                                    className={`
+                                                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                                                        ${hasAccess ? 'translate-x-6' : 'translate-x-1'}
+                                                    `}
+                                                />
                                             </button>
+                                            <div className="text-[10px] mt-1 text-gray-400 font-medium">
+                                                {hasAccess ? 'Đã cấp' : 'Chặn'}
+                                            </div>
                                         </td>
                                     )
                                 })}

@@ -13,6 +13,7 @@ import LuckySpin from './pages/LuckySpin';
 import CreateArticle from './pages/CreateArticle';
 import Profile from './pages/Profile';
 import CommunityChat from './pages/CommunityChat';
+import About from './pages/About';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -80,6 +81,7 @@ const App: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Landing />} />
         <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <Auth />} />
+        <Route path="/about" element={<About />} />
 
         {/* Private Routes (All Members) */}
         <Route 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Lock, CheckCircle, TrendingUp, Users } from 'lucide-react';
+import { ArrowRight, Lock, CheckCircle, TrendingUp, Users, Info } from 'lucide-react';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -21,13 +21,22 @@ const Landing: React.FC = () => {
           <p className="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl">
             Truy cập kho tàng kiến thức kỹ thuật, tin tức thị trường và cộng đồng độc quyền.
           </p>
-          <button 
-            onClick={() => navigate('/auth')}
-            className="group bg-earth-500 hover:bg-earth-700 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-all flex items-center space-x-2 text-lg"
-          >
-            <span>Đăng nhập / Kích hoạt</span>
-            <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button 
+                onClick={() => navigate('/auth')}
+                className="group bg-earth-500 hover:bg-earth-700 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-all flex items-center justify-center space-x-2 text-lg"
+            >
+                <span>Đăng nhập / Kích hoạt</span>
+                <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button 
+                onClick={() => navigate('/about')}
+                className="bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-full border border-white/30 backdrop-blur-sm transition-all flex items-center justify-center space-x-2"
+            >
+                <Info size={20} />
+                <span>Tìm hiểu về BTE04</span>
+            </button>
+          </div>
         </div>
       </div>
 

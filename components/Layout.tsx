@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logoutUser } from '../services/firebase';
-import { Home, LogOut, Shield, Menu, X, HelpCircle, Gift, PenTool, UserCircle, MessageCircle } from 'lucide-react';
+import { Home, LogOut, Shield, Menu, X, HelpCircle, Gift, PenTool, UserCircle, MessageCircle, Info } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface LayoutProps {
@@ -61,6 +61,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
 
           <nav className="hidden md:flex items-center space-x-4">
              <button onClick={() => navigate('/dashboard')} className="hover:text-primary-100 font-medium flex items-center gap-1"><Home size={18}/> Trang chủ</button>
+             <button onClick={() => navigate('/about')} className="hover:text-primary-100 font-medium flex items-center gap-1"><Info size={18}/> Giới thiệu</button>
              <button onClick={() => navigate('/chat')} className="hover:text-primary-100 font-medium flex items-center gap-1"><MessageCircle size={18}/> Phòng Họp</button>
              <button onClick={() => navigate('/qa')} className="hover:text-primary-100 font-medium flex items-center gap-1"><HelpCircle size={18}/> Hỏi đáp</button>
              <button onClick={() => navigate('/spin')} className="hover:text-primary-100 font-medium flex items-center gap-1"><Gift size={18}/> Vòng quay</button>
@@ -106,6 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
                )}
 
                <NavItem path="/dashboard" icon={Home} label="Tin tức & Kỹ thuật" />
+               <NavItem path="/about" icon={Info} label="Về BTE04" />
                <NavItem path="/chat" icon={MessageCircle} label="Phòng Họp Cộng Đồng" />
                <NavItem path="/qa" icon={HelpCircle} label="Hỏi đáp chuyên gia" />
                <NavItem path="/spin" icon={Gift} label="Vòng quay may mắn" />
@@ -134,16 +136,20 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
       {/* Footer */}
       <footer className="bg-primary-900 text-primary-100 py-8 mt-auto">
         <div className="container mx-auto px-4 text-center">
-          <p className="font-bold text-lg mb-2">CỘNG ĐỒNG CHĂN NUÔI BTE04</p>
-          <div className="flex justify-center space-x-4 mb-4 text-sm">
-            <span>Admin: Toàn quyền</span>
-            <span>•</span>
-            <span>Kỹ thuật: Hỗ trợ chuyên môn</span>
-            <span>•</span>
-            <span>Thành viên: Kết nối</span>
+          <div className="flex justify-center items-center gap-2 mb-4">
+             <div className="bg-white p-1 rounded-full">
+               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.5s-6 3.5-6 10c0 4 5 9 6 9s6-5 6-9c0-6.5-6-10-6-10z"/><path d="M12 2.5v19"/></svg>
+            </div>
+            <span className="font-bold text-xl">BTE04</span>
           </div>
-          <div className="text-xs text-gray-400">
-            &copy; 2024 BTE04. Độc quyền cho thành viên.
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6 text-sm">
+            <button onClick={() => navigate('/about')} className="hover:text-white hover:underline">Về chúng tôi</button>
+            <button onClick={() => navigate('/qa')} className="hover:text-white hover:underline">Hỗ trợ kỹ thuật</button>
+            <button onClick={() => navigate('/privacy')} className="hover:text-white hover:underline">Chính sách bảo mật</button>
+            <button onClick={() => navigate('/contact')} className="hover:text-white hover:underline">Liên hệ</button>
+          </div>
+          <div className="text-xs text-primary-300 border-t border-primary-800 pt-4">
+            &copy; 2024 CÔNG TY TNHH BTE04. Độc quyền cho thành viên.
           </div>
         </div>
       </footer>

@@ -20,8 +20,19 @@ const Auth: React.FC = () => {
     setSuccessMsg('');
     setLoading(true);
 
-    const cleanPhone = phoneNumber.trim();
-    const email = formatPhoneToEmail(cleanPhone);
+    // FIX: Loại bỏ khoảng trắng thừa trong SĐT (ví dụ: "0912 345 678" -> "0912345678")
+    const cleanPhone = phoneNumber.trim().replace(/\s+/g, '');
+    
+    // VALIDATION: Kiểm tra input rỗng trước khi gọi Firebase
+    if (!cleanPhone) {
+        setError('Vui lòng nhập Số điện thoại hoặc Email.');
+        setLoading(false);
+        return;
+    }
+
+    // FIX: Nếu nhập vào là email (có @), giữ nguyên. Nếu là SĐT, thêm đuôi fake email.
+    // Điều này giúp Admin đăng nhập bằng email thật mà không bị lỗi 'invalid-email' (double domain).
+    const email = cleanPhone.includes('@') ? cleanPhone : formatPhoneToEmail(cleanPhone);
 
     try {
       if (viewState === 'login') {
@@ -69,9 +80,16 @@ const Auth: React.FC = () => {
         return;
       }
     } catch (err: any) {
-      console.error("Auth Error:", err);
       const errorCode = err.code || '';
       const errorMessage = err.message || '';
+
+      // Chỉ log lỗi hệ thống, không log lỗi người dùng nhập sai (để tránh spam console)
+      if (errorCode !== 'auth/invalid-credential' && 
+          errorCode !== 'auth/user-not-found' && 
+          errorCode !== 'auth/wrong-password' &&
+          errorCode !== 'auth/invalid-email') {
+          console.error("Auth Error:", err);
+      }
 
       // Fallback Local Mode logic (giữ nguyên như cũ)
       if ((errorCode === 'auth/configuration-not-found' || errorCode === 'auth/operation-not-allowed') && viewState !== 'forgot') {
@@ -91,18 +109,22 @@ const Auth: React.FC = () => {
       }
 
       // Error Handling
-      if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password') {
-        setError('Sai thông tin đăng nhập.');
+      // FIX: Gộp user-not-found và invalid-credential để thông báo rõ ràng hơn
+      if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+        setError('Tài khoản không tồn tại hoặc mật khẩu không đúng.');
       } else if (errorCode === 'auth/email-already-in-use') {
         setError('Số điện thoại này đã được đăng ký.');
-      } else if (errorCode === 'auth/user-not-found') {
-        setError('Tài khoản không tồn tại.');
+      } else if (errorCode === 'auth/invalid-email') {
+        // FIX: Thông báo lỗi cụ thể cho định dạng email/sđt
+        setError('Số điện thoại hoặc Email không hợp lệ.');
       } else if (errorCode === 'auth/weak-password') {
         setError('Mật khẩu quá yếu. Vui lòng chọn mật khẩu mạnh hơn.');
       } else if (errorMessage.includes('Mã sản phẩm') || errorMessage.includes('Mật khẩu')) {
         setError(errorMessage);
+      } else if (errorCode === 'auth/network-request-failed') {
+        setError('Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền.');
       } else {
-        setError(errorMessage || 'Có lỗi xảy ra.');
+        setError(errorMessage || 'Có lỗi xảy ra. Vui lòng thử lại.');
       }
       setLoading(false);
     } 
@@ -149,7 +171,7 @@ const Auth: React.FC = () => {
           <form onSubmit={handleAuth} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                 {viewState === 'forgot' ? 'Số điện thoại hoặc Email' : 'Số điện thoại'}
+                 {viewState === 'register' ? 'Số điện thoại' : 'Số điện thoại hoặc Email'}
               </label>
               <input
                 type="text"
