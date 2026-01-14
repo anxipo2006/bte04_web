@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Lock, CheckCircle, TrendingUp, Users, Info } from 'lucide-react';
+import Logo from '../components/Logo';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -9,8 +10,14 @@ const Landing: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <div className="relative bg-primary-900 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1516467508483-a72120615613?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center" />
+        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1516467508483-a72120615613?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center" />
         <div className="container mx-auto px-4 py-20 relative z-10 flex flex-col items-center text-center">
+          
+          {/* Logo in Hero */}
+          <div className="bg-white p-4 rounded-3xl shadow-2xl mb-8 animate-in fade-in zoom-in duration-700 h-28 w-28 flex items-center justify-center">
+             <Logo className="h-20 w-20" />
+          </div>
+
           <div className="inline-block bg-earth-500 text-white px-3 py-1 rounded-full text-sm font-semibold mb-4">
             Dành riêng cho khách hàng BTE04
           </div>
