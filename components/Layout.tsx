@@ -49,10 +49,11 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
       <header className="bg-primary-800 text-white shadow-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
-            <div className="bg-white p-1.5 rounded-full shadow-sm">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.5s-6 3.5-6 10c0 4 5 9 6 9s6-5 6-9c0-6.5-6-10-6-10z"/><path d="M12 2.5v19"/></svg>
+            <div className="bg-white p-1 rounded-lg shadow-sm">
+               <img src="/logo.png" alt="BTE04" className="h-8 w-auto" />
             </div>
-            <h1 className="text-xl font-extrabold tracking-tight">BTE04</h1>
+            {/* Ẩn text trên mobile để đỡ chật, hiện trên desktop nếu cần, nhưng logo đã có chữ nên có thể ẩn luôn */}
+            <h1 className="text-xl font-extrabold tracking-tight hidden lg:block">BTE04</h1>
           </div>
           
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -97,7 +98,9 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
         <div className="fixed inset-0 z-40 bg-black bg-opacity-60 md:hidden backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}>
           <div className="absolute right-0 top-0 h-full w-72 bg-white shadow-2xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
              <div className="flex justify-between items-center mb-6 border-b pb-4">
-                <span className="font-extrabold text-xl text-primary-900">Menu</span>
+                <div className="flex items-center gap-2">
+                    <img src="/logo.png" alt="BTE04" className="h-8 w-auto" />
+                </div>
                 <button onClick={() => setIsMenuOpen(false)} className="text-gray-500 hover:text-red-500"><X size={24} /></button>
              </div>
              
@@ -137,10 +140,9 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole }) => {
       <footer className="bg-slate-900 text-slate-200 py-10 mt-auto">
         <div className="container mx-auto px-4 text-center">
           <div className="flex justify-center items-center gap-2 mb-4">
-             <div className="bg-white p-1 rounded-full">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.5s-6 3.5-6 10c0 4 5 9 6 9s6-5 6-9c0-6.5-6-10-6-10z"/><path d="M12 2.5v19"/></svg>
+             <div className="bg-white p-2 rounded-xl">
+               <img src="/logo.png" alt="BTE04" className="h-10 w-auto" />
             </div>
-            <span className="font-bold text-2xl tracking-wide">BTE04</span>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-8 text-sm font-medium">
             <button onClick={() => navigate('/about')} className="hover:text-white hover:underline transition-all">Về chúng tôi</button>

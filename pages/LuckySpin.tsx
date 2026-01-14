@@ -100,9 +100,11 @@ const LuckySpin: React.FC = () => {
                  </div>
                );
             })}
-             {/* Simple center label overlay since CSS conic slices are hard */}
-            <div className="absolute inset-0 rounded-full flex items-center justify-center">
-                 <span className="font-bold text-white text-xl drop-shadow-md">BTE04</span>
+             {/* Center Logo Overlay */}
+            <div className="absolute inset-0 rounded-full flex items-center justify-center pointer-events-none">
+                 <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-yellow-100 p-2">
+                    <img src="/logo.png" alt="BTE04" className="w-full h-auto object-contain" />
+                 </div>
             </div>
           </div>
         </div>

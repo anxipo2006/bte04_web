@@ -141,6 +141,13 @@ const Auth: React.FC = () => {
                 <ArrowLeft size={24} />
             </button>
           )}
+          
+          <div className="flex justify-center mb-4">
+              <div className="bg-white p-2 rounded-xl shadow-lg">
+                  <img src="/logo.png" alt="BTE04" className="h-12 w-auto" />
+              </div>
+          </div>
+
           <h2 className="text-2xl font-bold">
             {viewState === 'login' && 'Đăng Nhập'}
             {viewState === 'register' && 'Kích Hoạt Tài Khoản'}
